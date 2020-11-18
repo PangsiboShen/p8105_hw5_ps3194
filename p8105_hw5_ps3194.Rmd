@@ -17,6 +17,7 @@ options(
 
 scale_colour_discrete = scale_color_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
+set.seed(123)
 ```
 
 ## Problem 1
@@ -131,7 +132,138 @@ path_df %>%
   scale_x_continuous(breaks= c(1,2,3,4,5,6,7,8)) +
   ggtitle("spaghetti plot showing observations on each subject over time")
 ```
+## Problem 3
+
+```{r}
+#The probability that a false null hypothesis is rejected is referred to as power
+sim_t_test = function(mu , samp_size = 30, sigma = 5) {
+  
+  sim_data = 
+    tibble(
+      broom::tidy(t.test(rnorm(n = samp_size, mean = mu, sd = sigma)))
+    ) %>%
+    select(c(estimate, p.value))
+  sim_data
+}
+```
 
 
+## Let's simulate 5000 times
+
+
+```{r}
+output_0 = vector("list", length = 5000)
+
+for (i in 1:5000) {
+  
+  output_0[[i]] = sim_t_test(0)
+  
+}
+
+bind_rows(output_0)
+
+power = (bind_rows(output_0) %>%
+  filter(
+    p.value > 0.05 
+  ) %>% nrow())/5000
+```
+
+## simulate other mu values
+
+
+```{r}
+# mu_list = 
+#   list(
+#     "mu = 1" = 1,
+#     "mu = 2" = 2,
+#     "mu = 3" = 3,
+#     "mu = 4" = 4,
+#     "mu = 5" = 5,
+#     "mu = 6" = 6
+#   )
+# 
+# output = vector("list", length = 6)
+# 
+# 
+# for (i in 1:6) {
+#   
+#   output[[i]] = 
+#     rerun(5000, sim_t_test(mu = mu_list[[i]])) %>% 
+#     bind_rows()
+#   
+# }
+```
+
+```{r}
+
+# output_power = vector("list", length = 6)
+# 
+# for (i in 1:6) {
+# 
+# output_power[[i]] =  
+#   output[[i]] %>%
+#   filter(
+#     p.value > 0.05 
+#   ) %>% nrow()
+#   
+# }
+
+```
+
+```{r}
+sim_results = 
+  tibble(
+    mu = c(0,1,2,3,4,5,6)
+  ) %>% 
+  mutate(
+    output_lists = map(.x = mu, ~ rerun(5000, sim_t_test(.x))),
+    estimate_df = map(output_lists, bind_rows)
+  ) %>% 
+  select(-output_lists) %>% 
+  unnest(estimate_df)
+```
+
+```{r}
+sim_results_plot_1 =
+  sim_results %>%
+  filter(p.value < 0.05) %>%
+  group_by(mu) %>%
+  summarise(power = n()/5000) %>%
+  transform(mu = as.factor(mu)) %>%
+  ggplot(aes(mu, power)) +
+  geom_bar(stat='identity') +
+  ylab("the power of the test" ) +
+  xlab("true value of mu")
+
+sim_results_plot_1
+
+sim_results_plot_2 =
+  sim_results %>%
+  group_by(mu) %>%
+  summarise(avg_estimate = mean(estimate))  %>%
+  transform(mu = as.factor(mu))
+  #ggplot(aes(mu, avg_estimate)) +
+  #geom_point(stat='identity') +
+  #ylab("average estimate of mu hat" ) +
+  #xlab("true value of mu")
+
+sim_results_plot_3 =
+  sim_results %>%
+  filter(p.value < 0.05) %>%
+  group_by(mu) %>%
+  summarise(avg_estimate = mean(estimate)) %>%
+  transform(mu = as.factor(mu))
+
+  #ggplot(aes(mu, avg_estimate)) +
+  #geom_point(stat='identity') +
+  #ylab("average estimate of mu hat" ) +
+  #xlab("true value of mu")
+
+ggplot() +
+  geom_point(data = sim_results_plot_2, aes(mu, avg_estimate, color = "all mu hat")) +
+  geom_point(data = sim_results_plot_3, aes(mu, avg_estimate, color = "mu hat null rejected")) +
+  ylab("average estimate of mu hat" ) +
+  xlab("true value of mu")
+```
 
 
