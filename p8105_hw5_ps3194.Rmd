@@ -2,7 +2,7 @@
 title: "p8105_hw5_ps3194"
 author: "Pangsibo Shen"
 date: "11/10/2020"
-output: html_document
+output: github_document
 ---
 
 ```{r}
@@ -25,6 +25,7 @@ set.seed(123)
 Read in the table
 
 ```{r}
+#load and clean the data
 homicide_df =
   read_csv("./data/homicide-data.csv") %>%
   mutate(
@@ -38,9 +39,10 @@ homicide_df =
   select(city_state, resolved) %>%
   filter(city_state != "Tulsa_AL")
 ```
-Raw data has 52179 observations and 12 variables including: uid,reported_date, victim_last, victim_first, victim_race,victim_age, victim_sex, city, state, lat, lon and disposition. 
+Raw data has 52179 observations and 12 variables including: uid,reported_date, victim_last, victim_first, victim_race,victim_age, victim_sex, city, state, lat, lon and disposition. It contains homicides data in 50 large U.S. cities.
 
 ```{r}
+#summarize within cities to obtain the total number of homicides and the number of unsolved homicides
 aggregate_df =
   homicide_df %>%
   group_by(city_state) %>%
@@ -57,7 +59,7 @@ Can I do a prop test for a single city?
 prop.test(
   aggregate_df %>% filter(city_state == "Baltimore_MD") %>% pull(hom_unsolved),
   aggregate_df %>% filter(city_state == "Baltimore_MD") %>% pull(hom_total)) %>%
-  broom:: tidy()
+  broom::tidy()
 ```
 
 Try to iterate...
@@ -72,27 +74,25 @@ results_df =
   select(-prop_tests) %>%
   unnest(tidy_tests) %>%
   select(city_state, estimate, conf.low, conf.high)
+
+head(results_df  )
 ```
 
 ```{r}
 results_df %>%
   mutate(city_state = fct_reorder(city_state,estimate)) %>%
-  ggplot(aes(x = city_state, y =estimate)) +
+  ggplot(aes(x = city_state, y = estimate)) +
   geom_point() +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
-  theme(axis.text.x = element_text(angle =90, vjust = 0.5, hjust = 1))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
+
 -------------------------------------------
 
 ## problem 2
 
 ```{r message= FALSE}
-#load data
-data_1 = read_csv("data/lda_data/con_01.csv")
-```
-
-```{r message= FALSE}
-#tidy data
+#load and tidy data
 path_df = 
   tibble(
     path = list.files("data/lda_data")
@@ -125,6 +125,7 @@ path_df =
     arm = as_factor(arm),
     week = as.numeric(week)
             )
+head(path_df)
 ```
 
 
@@ -133,18 +134,19 @@ path_df =
 path_df %>%
   ggplot(aes(x = week, y = observation, gourp = subject_id, color = arm)) +
   geom_line() +
-  scale_x_continuous(breaks= c(1,2,3,4,5,6,7,8)) +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8)) +
   ggtitle("spaghetti plot showing observations on each subject over time")
 ```
+
+From the spaghetti plot, we notice that the observations for control subjects across 8 weeks are pretty stable, with no significant increasing or deceasing in observation values across time; on the other hands, the numeric value of observations for experimental subjects are increasing across 8 weeks. 
 
 -----------------------------------
 
 ## Problem 3
 
 ```{r}
-#The probability that a false null hypothesis is rejected is referred to as power
+#write a function for one-sample t-test with fixed n and sigma
 sim_t_test = function(mu , samp_size = 30, sigma = 5) {
-  
   sim_data = 
     tibble(
       broom::tidy(t.test(rnorm(n = samp_size, mean = mu, sd = sigma)))
@@ -156,7 +158,7 @@ sim_t_test = function(mu , samp_size = 30, sigma = 5) {
 
 
 ```{r initial_simulation}
-# Let's simulate 5000 times
+# Let's simulate 5000 times for mu = 0
 output_0 = vector("list", length = 5000)
 
 for (i in 1:5000) {
@@ -166,55 +168,16 @@ for (i in 1:5000) {
 }
 
 bind_rows(output_0)
-
-power = (bind_rows(output_0) %>%
+#The probability that a false null hypothesis is rejected is referred to as power
+power_0 = (bind_rows(output_0) %>%
   filter(
-    p.value > 0.05 
+    p.value < 0.05 
   ) %>% nrow())/5000
 ```
-
-
-```{r}
-# mu_list = 
-#   list(
-#     "mu = 1" = 1,
-#     "mu = 2" = 2,
-#     "mu = 3" = 3,
-#     "mu = 4" = 4,
-#     "mu = 5" = 5,
-#     "mu = 6" = 6
-#   )
-# 
-# output = vector("list", length = 6)
-# 
-# 
-# for (i in 1:6) {
-#   
-#   output[[i]] = 
-#     rerun(5000, sim_t_test(mu = mu_list[[i]])) %>% 
-#     bind_rows()
-#   
-# }
-```
-
-```{r}
-
-# output_power = vector("list", length = 6)
-# 
-# for (i in 1:6) {
-# 
-# output_power[[i]] =  
-#   output[[i]] %>%
-#   filter(
-#     p.value > 0.05 
-#   ) %>% nrow()
-#   
-# }
-
-```
+The power of the test for $\mu$ = 0 is `r power_0`.
 
 ```{r simulation}
-#simulate other mu values
+#simulate other mu values 5000 times and record them in a tibble
 sim_results = 
   tibble(
     mu = c(0,1,2,3,4,5,6)
@@ -225,9 +188,11 @@ sim_results =
   ) %>% 
   select(-output_lists) %>% 
   unnest(estimate_df)
+
+head(sim_results)
 ```
 
-```{r}
+```{r message=FALSE}
 #figure 1
 sim_results_plot_1 =
   sim_results %>%
@@ -236,21 +201,22 @@ sim_results_plot_1 =
   summarise(power = n()/5000) %>%
   transform(mu = as.factor(mu)) %>%
   ggplot(aes(mu, power)) +
-  geom_bar(stat ='identity') +
-  ylab("the power of the test" ) +
-  xlab("true value of mu")
+  geom_bar(stat = 'identity') +
+  ylab("The Power of The Test" ) +
+  xlab("True Value of Mu") +
+  ggtitle("The Power of the Test for Different Values of True Mu ")
 
 sim_results_plot_1
+```
+As the true value of mu becomes larger, the power of the test increases. The results make sense as the true value becomes larger and departs more from the null hypothesis, we are more likely to reject the false null hypothesis, hence the power of the test becomes larger. 
 
+```{r message=FALSE}
+#figure 2 amd 3 overlay
 sim_results_plot_2 =
   sim_results %>%
   group_by(mu) %>%
   summarise(avg_estimate = mean(estimate))  %>%
   transform(mu = as.factor(mu))
-  #ggplot(aes(mu, avg_estimate)) +
-  #geom_point(stat='identity') +
-  #ylab("average estimate of mu hat" ) +
-  #xlab("true value of mu")
 
 sim_results_plot_3 =
   sim_results %>%
@@ -259,18 +225,14 @@ sim_results_plot_3 =
   summarise(avg_estimate = mean(estimate)) %>%
   transform(mu = as.factor(mu))
 
-  #ggplot(aes(mu, avg_estimate)) +
-  #geom_point(stat='identity') +
-  #ylab("average estimate of mu hat" ) +
-  #xlab("true value of mu")
-
 #figure 2
 
 ggplot() +
   geom_point(data = sim_results_plot_2, aes(mu, avg_estimate, color = "all mu hat")) +
   geom_point(data = sim_results_plot_3, aes(mu, avg_estimate, color = "mu hat null rejected")) +
   ylab("average estimate of mu hat") +
-  xlab("true value of mu")
+  xlab("true value of mu") +
+  ggtitle("The Average Estimate Across Different True Mu")
 ```
-
+The sample averages of $\hat\mu$ across tests for which the null is rejected are getting closer to the true values of $\mu$ As the true value of mu increases. Because as the true value of mu increases(our hypothesized value is still 0), our power of the test is also increasing. In other words, we are more likely to reject false null hypothesis and the sample average of $\hat\mu$ across tests for which the null is rejected is going to be closer to the true mu.
 
