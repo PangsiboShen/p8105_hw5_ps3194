@@ -5,8 +5,8 @@ date: "11/10/2020"
 output: html_document
 ---
 
-
 ```{r}
+#initial setup
 library(tidyverse)
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
@@ -20,7 +20,7 @@ scale_fill_discrete = scale_fill_viridis_d
 set.seed(123)
 ```
 
-## Problem 1
+## problem 1
 
 Read in the table
 
@@ -82,14 +82,17 @@ results_df %>%
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
   theme(axis.text.x = element_text(angle =90, vjust = 0.5, hjust = 1))
 ```
+-------------------------------------------
 
-## Problem 2
-load data
+## problem 2
+
 ```{r message= FALSE}
+#load data
 data_1 = read_csv("data/lda_data/con_01.csv")
 ```
-tidy data
+
 ```{r message= FALSE}
+#tidy data
 path_df = 
   tibble(
     path = list.files("data/lda_data")
@@ -124,14 +127,18 @@ path_df =
             )
 ```
 
-plot
+
 ```{r}
+#plot
 path_df %>%
   ggplot(aes(x = week, y = observation, gourp = subject_id, color = arm)) +
   geom_line() +
   scale_x_continuous(breaks= c(1,2,3,4,5,6,7,8)) +
   ggtitle("spaghetti plot showing observations on each subject over time")
 ```
+
+-----------------------------------
+
 ## Problem 3
 
 ```{r}
@@ -148,10 +155,8 @@ sim_t_test = function(mu , samp_size = 30, sigma = 5) {
 ```
 
 
-## Let's simulate 5000 times
-
-
-```{r}
+```{r initial_simulation}
+# Let's simulate 5000 times
 output_0 = vector("list", length = 5000)
 
 for (i in 1:5000) {
@@ -167,8 +172,6 @@ power = (bind_rows(output_0) %>%
     p.value > 0.05 
   ) %>% nrow())/5000
 ```
-
-## simulate other mu values
 
 
 ```{r}
@@ -210,7 +213,8 @@ power = (bind_rows(output_0) %>%
 
 ```
 
-```{r}
+```{r simulation}
+#simulate other mu values
 sim_results = 
   tibble(
     mu = c(0,1,2,3,4,5,6)
@@ -224,6 +228,7 @@ sim_results =
 ```
 
 ```{r}
+#figure 1
 sim_results_plot_1 =
   sim_results %>%
   filter(p.value < 0.05) %>%
@@ -231,7 +236,7 @@ sim_results_plot_1 =
   summarise(power = n()/5000) %>%
   transform(mu = as.factor(mu)) %>%
   ggplot(aes(mu, power)) +
-  geom_bar(stat='identity') +
+  geom_bar(stat ='identity') +
   ylab("the power of the test" ) +
   xlab("true value of mu")
 
@@ -259,10 +264,12 @@ sim_results_plot_3 =
   #ylab("average estimate of mu hat" ) +
   #xlab("true value of mu")
 
+#figure 2
+
 ggplot() +
   geom_point(data = sim_results_plot_2, aes(mu, avg_estimate, color = "all mu hat")) +
   geom_point(data = sim_results_plot_3, aes(mu, avg_estimate, color = "mu hat null rejected")) +
-  ylab("average estimate of mu hat" ) +
+  ylab("average estimate of mu hat") +
   xlab("true value of mu")
 ```
 
